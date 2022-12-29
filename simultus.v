@@ -2,10 +2,11 @@ module main
 
 import gg
 import gx
-// import os
+import os
 // import math
 import time
 // import rand
+import json
 
 struct Vec2 {
 mut:
@@ -46,6 +47,11 @@ mut:
 	dim Vec2
 }
 
+struct Enviroment {
+mut:
+	tiles []EnvTile
+}
+
 struct GameTime {
 mut:
 	tick_rate  int
@@ -59,7 +65,7 @@ mut:
 	time   GameTime
 	player Player
 	sim    Simultus
-	tiles  []EnvTile
+	env    Enviroment
 }
 
 fn main() {
@@ -114,29 +120,12 @@ fn init(mut game Game) {
 	//		'img', 'player.png'))).id
 	game.time.start_time = time.ticks()
 	game.time.last_tick = time.ticks()
-	// TODO: read Tiles etc from File and apply them here
-	test_tile := EnvTile{
-		pos: Vec2{
-			x: 200
-			y: 150
-		}
-		dim: Vec2{
-			x: 100
-			y: 150
-		}
+	map_path := os.resource_abs_path(os.join_path('rsc', 'maps', 'map.json'))
+	raw_json := os.read_file(map_path) or { panic(err) }
+	game.env.tiles = json.decode([]EnvTile, raw_json) or {
+		eprintln('Failed to decode json, error: ${err}')
+		return
 	}
-	test_tile2 := EnvTile{
-		pos: Vec2{
-			x: 500
-			y: 550
-		}
-		dim: Vec2{
-			x: 100
-			y: 150
-		}
-	}
-	game.tiles << test_tile
-	game.tiles << test_tile2
 }
 
 fn frame(mut game Game) {
@@ -217,21 +206,19 @@ fn sim_tile_collision_check(player Simultus, tile EnvTile) bool {
 }
 
 fn check_tile_collision(mut game Game) {
-	for tile in game.tiles {
+	for tile in game.env.tiles {
 		collision1 := player_tile_collision_check(game.player, tile)
 		collision2 := sim_tile_collision_check(game.sim, tile)
 		if collision1 == true {
-			println('Colliding 1')
 			game.player.pos.x = game.player.old_pos.x
 			game.player.pos.y = game.player.old_pos.y
-			game.sim.pos.x = game.player.pos.x
-			game.sim.pos.y = game.player.pos.y - game.gg.height / 2
+			game.sim.pos.x = game.player.old_pos.x
+			game.sim.pos.y = game.player.old_pos.y - game.gg.height / 2
 		} else if collision2 == true {
-			println('Collinging 2')
 			game.player.pos.x = game.player.old_pos.x
 			game.player.pos.y = game.player.old_pos.y
-			game.sim.pos.x = game.player.pos.x
-			game.sim.pos.y = game.player.pos.y - game.gg.height / 2
+			game.sim.pos.x = game.player.old_pos.x
+			game.sim.pos.y = game.player.old_pos.y - game.gg.height / 2
 		}
 	}
 }
@@ -256,8 +243,8 @@ fn move_sim(mut game Game) {
 fn move_all(mut game Game) {
 	mut movement_player := calc_player_move(mut game)
 	move_player(mut game, movement_player)
-	check_movement(mut game)
 	move_sim(mut game)
+	check_movement(mut game)
 }
 
 fn (game &Game) update(mut mutgame Game) {
@@ -267,12 +254,13 @@ fn (game &Game) update(mut mutgame Game) {
 }
 
 fn player_draw(game &Game) {
-	game.gg.draw_circle_filled(game.player.pos.x, game.player.pos.y, game.player.width / 2,
-		gx.blue)
+	game.gg.draw_rect_filled(game.player.pos.x, game.player.pos.y, game.player.width,
+		game.player.height, gx.blue)
 }
 
 fn sim_draw(game &Game) {
-	game.gg.draw_circle_filled(game.sim.pos.x, game.sim.pos.y, game.sim.width / 2, gx.red)
+	game.gg.draw_rect_filled(game.sim.pos.x, game.sim.pos.y, game.sim.width, game.sim.height,
+		gx.red)
 }
 
 fn boundarys_draw(game &Game) {
@@ -280,7 +268,7 @@ fn boundarys_draw(game &Game) {
 }
 
 fn tiles_draw(game &Game) {
-	for tile in game.tiles {
+	for tile in game.env.tiles {
 		game.gg.draw_rect_empty(tile.pos.x, tile.pos.y, tile.dim.x, tile.dim.y, gx.green)
 	}
 }
