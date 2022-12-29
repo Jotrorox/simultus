@@ -23,12 +23,13 @@ mut:
 
 struct Player {
 mut:
-	pos    Vec2
-	dir    Direction
-	speed  int
-	width  int
-	height int
-	image  int
+	pos     Vec2
+	old_pos Vec2
+	dir     Direction
+	speed   int
+	width   int
+	height  int
+	image   int
 }
 
 struct Simultus {
@@ -37,6 +38,12 @@ mut:
 	width  int
 	height int
 	image  int
+}
+
+struct EnvTile {
+mut:
+	pos Vec2
+	dim Vec2
 }
 
 struct GameTime {
@@ -52,6 +59,7 @@ mut:
 	time   GameTime
 	player Player
 	sim    Simultus
+	tiles  []EnvTile
 }
 
 fn main() {
@@ -78,6 +86,10 @@ fn init(mut game Game) {
 			x: 100
 			y: 100
 		}
+		old_pos: Vec2{
+			x: 0
+			y: 0
+		}
 		dir: Direction{
 			up: false
 			down: false
@@ -102,6 +114,29 @@ fn init(mut game Game) {
 	//		'img', 'player.png'))).id
 	game.time.start_time = time.ticks()
 	game.time.last_tick = time.ticks()
+	// TODO: read Tiles etc from File and apply them here
+	test_tile := EnvTile{
+		pos: Vec2{
+			x: 200
+			y: 150
+		}
+		dim: Vec2{
+			x: 100
+			y: 150
+		}
+	}
+	test_tile2 := EnvTile{
+		pos: Vec2{
+			x: 500
+			y: 550
+		}
+		dim: Vec2{
+			x: 100
+			y: 150
+		}
+	}
+	game.tiles << test_tile
+	game.tiles << test_tile2
 }
 
 fn frame(mut game Game) {
@@ -158,20 +193,71 @@ fn calc_player_move(mut game Game) Vec2 {
 	return movement
 }
 
+fn check_boundarys(mut game Game) {
+	if game.player.pos.x - game.player.width / 2 < 0 {
+		game.player.pos.x = 0 + game.player.width / 2
+	} else if game.player.pos.x + game.player.height / 2 > game.gg.width {
+		game.player.pos.x = game.gg.width - game.player.width / 2
+	}
+	if game.player.pos.y - game.player.height / 2 < 0 {
+		game.player.pos.y = 0 + game.player.height / 2
+	} else if game.player.pos.y + game.player.height / 2 > game.gg.height / 2 {
+		game.player.pos.y = game.gg.height / 2 - game.player.height / 2
+	}
+}
+
+fn player_tile_collision_check(player Player, tile EnvTile) bool {
+	return player.pos.x < tile.pos.x + tile.dim.x && player.pos.x + player.width > tile.pos.x
+		&& player.pos.y < tile.pos.y + tile.dim.y && player.pos.y + player.height > tile.pos.y
+}
+
+fn sim_tile_collision_check(player Simultus, tile EnvTile) bool {
+	return player.pos.x < tile.pos.x + tile.dim.x && player.pos.x + player.width > tile.pos.x
+		&& player.pos.y < tile.pos.y + tile.dim.y && player.pos.y + player.height > tile.pos.y
+}
+
+fn check_tile_collision(mut game Game) {
+	for tile in game.tiles {
+		collision1 := player_tile_collision_check(game.player, tile)
+		collision2 := sim_tile_collision_check(game.sim, tile)
+		if collision1 == true {
+			println('Colliding 1')
+			game.player.pos.x = game.player.old_pos.x
+			game.player.pos.y = game.player.old_pos.y
+			game.sim.pos.x = game.player.pos.x
+			game.sim.pos.y = game.player.pos.y - game.gg.height / 2
+		} else if collision2 == true {
+			println('Collinging 2')
+			game.player.pos.x = game.player.old_pos.x
+			game.player.pos.y = game.player.old_pos.y
+			game.sim.pos.x = game.player.pos.x
+			game.sim.pos.y = game.player.pos.y - game.gg.height / 2
+		}
+	}
+}
+
+fn check_movement(mut game Game) {
+	check_boundarys(mut game)
+	check_tile_collision(mut game)
+}
+
 fn move_player(mut game Game, movement Vec2) {
+	game.player.old_pos.x = game.player.pos.x
+	game.player.old_pos.y = game.player.pos.y
 	game.player.pos.x += movement.x * game.player.speed
 	game.player.pos.y += movement.y * game.player.speed
 }
 
-fn move_sim(mut game Game, movement Vec2) {
-	game.sim.pos.x += movement.x * game.player.speed
-	game.sim.pos.y += movement.y * game.player.speed
+fn move_sim(mut game Game) {
+	game.sim.pos.x = game.player.pos.x
+	game.sim.pos.y = game.player.pos.y + game.gg.height / 2
 }
 
 fn move_all(mut game Game) {
 	mut movement_player := calc_player_move(mut game)
 	move_player(mut game, movement_player)
-	move_sim(mut game, movement_player)
+	check_movement(mut game)
+	move_sim(mut game)
 }
 
 fn (game &Game) update(mut mutgame Game) {
@@ -189,8 +275,24 @@ fn sim_draw(game &Game) {
 	game.gg.draw_circle_filled(game.sim.pos.x, game.sim.pos.y, game.sim.width / 2, gx.red)
 }
 
+fn boundarys_draw(game &Game) {
+	game.gg.draw_line(0, game.gg.height / 2, game.gg.width, game.gg.height / 2, gx.black)
+}
+
+fn tiles_draw(game &Game) {
+	for tile in game.tiles {
+		game.gg.draw_rect_empty(tile.pos.x, tile.pos.y, tile.dim.x, tile.dim.y, gx.green)
+	}
+}
+
+fn env_draw(game &Game) {
+	boundarys_draw(game)
+	tiles_draw(game)
+}
+
 fn (game &Game) draw() {
 	game.gg.begin()
+	env_draw(game)
 	player_draw(game)
 	sim_draw(game)
 	game.gg.end()
