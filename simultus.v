@@ -45,6 +45,7 @@ struct EnvTile {
 mut:
 	pos Vec2
 	dim Vec2
+	typ int // 1 = solid, 2 = pushable
 }
 
 struct Enviroment {
@@ -240,10 +241,29 @@ fn move_sim(mut game Game) {
 	game.sim.pos.y = game.player.pos.y + game.gg.height / 2
 }
 
+fn move_pushable_block(mut game Game, movement Vec2) {
+	for mut tile in game.env.tiles {
+		if tile.typ == 2 {
+			if player_tile_collision_check(game.player, tile) == true {
+				tile.pos.x += movement.x * game.player.speed
+				tile.pos.y += movement.y * game.player.speed
+			} else if sim_tile_collision_check(game.sim, tile) == true {
+				tile.pos.x += movement.x * game.player.speed
+				tile.pos.y += movement.y * game.player.speed
+			}
+		}
+	}
+}
+
+fn move_env(mut game Game, movement Vec2) {
+	move_pushable_block(mut game, movement)
+}
+
 fn move_all(mut game Game) {
 	mut movement_player := calc_player_move(mut game)
 	move_player(mut game, movement_player)
 	move_sim(mut game)
+	move_env(mut game, movement_player)
 	check_movement(mut game)
 }
 
@@ -269,7 +289,11 @@ fn boundarys_draw(game &Game) {
 
 fn tiles_draw(game &Game) {
 	for tile in game.env.tiles {
-		game.gg.draw_rect_empty(tile.pos.x, tile.pos.y, tile.dim.x, tile.dim.y, gx.green)
+		if tile.typ == 1 {
+			game.gg.draw_rect_empty(tile.pos.x, tile.pos.y, tile.dim.x, tile.dim.y, gx.green)
+		} else if tile.typ == 2 {
+			game.gg.draw_rect_empty(tile.pos.x, tile.pos.y, tile.dim.x, tile.dim.y, gx.yellow)
+		}
 	}
 }
 
