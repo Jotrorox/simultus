@@ -28,17 +28,15 @@ mut:
 	old_pos Vec2
 	dir     Direction
 	speed   int
-	width   int
-	height  int
-	image   int
+	dim     Vec2
+	image   []int
 }
 
 struct Simultus {
 mut:
-	pos    Vec2
-	width  int
-	height int
-	image  int
+	pos   Vec2
+	dim   Vec2
+	image []int
 }
 
 struct EnvTile {
@@ -104,18 +102,26 @@ fn init(mut game Game) {
 			left: false
 		}
 		speed: 3
-		width: 32
-		height: 32
+		dim: Vec2{
+			x: 32
+			y: 32
+		}
 	}
-	// game.player.image = game.gg.create_image(os.resource_abs_path(os.join_path('rsc',
-	//		'img', 'player.png'))).id
+	game.player.image << game.gg.create_image(os.resource_abs_path(os.join_path('rsc',
+		'img', 'Player1.png'))).id
+	game.player.image << game.gg.create_image(os.resource_abs_path(os.join_path('rsc',
+		'img', 'Player2.png'))).id
+	game.player.image << game.gg.create_image(os.resource_abs_path(os.join_path('rsc',
+		'img', 'Player3.png'))).id
 	game.sim = Simultus{
 		pos: Vec2{
 			x: 100
 			y: 500
 		}
-		width: 32
-		height: 32
+		dim: Vec2{
+			x: 32
+			y: 32
+		}
 	}
 	// game.player.image = game.gg.create_image(os.resource_abs_path(os.join_path('rsc',
 	//		'img', 'player.png'))).id
@@ -184,26 +190,26 @@ fn calc_player_move(mut game Game) Vec2 {
 }
 
 fn check_boundarys(mut game Game) {
-	if game.player.pos.x - game.player.width / 2 < 0 {
-		game.player.pos.x = 0 + game.player.width / 2
-	} else if game.player.pos.x + game.player.height / 2 > game.gg.width {
-		game.player.pos.x = game.gg.width - game.player.width / 2
+	if game.player.pos.x - game.player.dim.x / 2 < 0 {
+		game.player.pos.x = 0 + game.player.dim.x / 2
+	} else if game.player.pos.x + game.player.dim.y / 2 > game.gg.width {
+		game.player.pos.x = game.gg.width - game.player.dim.x / 2
 	}
-	if game.player.pos.y - game.player.height / 2 < 0 {
-		game.player.pos.y = 0 + game.player.height / 2
-	} else if game.player.pos.y + game.player.height / 2 > game.gg.height / 2 {
-		game.player.pos.y = game.gg.height / 2 - game.player.height / 2
+	if game.player.pos.y - game.player.dim.y / 2 < 0 {
+		game.player.pos.y = 0 + game.player.dim.y / 2
+	} else if game.player.pos.y + game.player.dim.y / 2 > game.gg.height / 2 {
+		game.player.pos.y = game.gg.height / 2 - game.player.dim.y / 2
 	}
 }
 
 fn player_tile_collision_check(player Player, tile EnvTile) bool {
-	return player.pos.x < tile.pos.x + tile.dim.x && player.pos.x + player.width > tile.pos.x
-		&& player.pos.y < tile.pos.y + tile.dim.y && player.pos.y + player.height > tile.pos.y
+	return player.pos.x < tile.pos.x + tile.dim.x && player.pos.x + player.dim.x > tile.pos.x
+		&& player.pos.y < tile.pos.y + tile.dim.y && player.pos.y + player.dim.y > tile.pos.y
 }
 
 fn sim_tile_collision_check(player Simultus, tile EnvTile) bool {
-	return player.pos.x < tile.pos.x + tile.dim.x && player.pos.x + player.width > tile.pos.x
-		&& player.pos.y < tile.pos.y + tile.dim.y && player.pos.y + player.height > tile.pos.y
+	return player.pos.x < tile.pos.x + tile.dim.x && player.pos.x + player.dim.x > tile.pos.x
+		&& player.pos.y < tile.pos.y + tile.dim.y && player.pos.y + player.dim.y > tile.pos.y
 }
 
 fn check_tile_collision(mut game Game) {
@@ -274,12 +280,20 @@ fn (game &Game) update(mut mutgame Game) {
 }
 
 fn player_draw(game &Game) {
-	game.gg.draw_rect_filled(game.player.pos.x, game.player.pos.y, game.player.width,
-		game.player.height, gx.blue)
+	if game.player.dir.left == true {
+		game.gg.draw_image_by_id(game.player.pos.x, game.player.pos.y, game.player.dim.x,
+			game.player.dim.y, game.player.image[0])
+	} else if game.player.dir.right == true {
+		game.gg.draw_image_by_id(game.player.pos.x, game.player.pos.y, game.player.dim.x,
+			game.player.dim.y, game.player.image[1])
+	} else {
+		game.gg.draw_image_by_id(game.player.pos.x, game.player.pos.y, game.player.dim.x,
+			game.player.dim.y, game.player.image[2])
+	}
 }
 
 fn sim_draw(game &Game) {
-	game.gg.draw_rect_filled(game.sim.pos.x, game.sim.pos.y, game.sim.width, game.sim.height,
+	game.gg.draw_rect_filled(game.sim.pos.x, game.sim.pos.y, game.sim.dim.x, game.sim.dim.y,
 		gx.red)
 }
 
