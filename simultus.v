@@ -123,8 +123,12 @@ fn init(mut game Game) {
 			y: 32
 		}
 	}
-	// game.player.image = game.gg.create_image(os.resource_abs_path(os.join_path('rsc',
-	//		'img', 'player.png'))).id
+	game.sim.image << game.gg.create_image(os.resource_abs_path(os.join_path('rsc', 'img',
+		'Sim1.png'))).id
+	game.sim.image << game.gg.create_image(os.resource_abs_path(os.join_path('rsc', 'img',
+		'Sim2.png'))).id
+	game.sim.image << game.gg.create_image(os.resource_abs_path(os.join_path('rsc', 'img',
+		'Sim3.png'))).id
 	game.time.start_time = time.ticks()
 	game.time.last_tick = time.ticks()
 	map_path := os.resource_abs_path(os.join_path('rsc', 'maps', 'map.json'))
@@ -293,8 +297,16 @@ fn player_draw(game &Game) {
 }
 
 fn sim_draw(game &Game) {
-	game.gg.draw_rect_filled(game.sim.pos.x, game.sim.pos.y, game.sim.dim.x, game.sim.dim.y,
-		gx.red)
+	if game.player.dir.left == true {
+		game.gg.draw_image_by_id(game.sim.pos.x, game.sim.pos.y, game.sim.dim.x, game.sim.dim.y,
+			game.sim.image[0])
+	} else if game.player.dir.right == true {
+		game.gg.draw_image_by_id(game.sim.pos.x, game.sim.pos.y, game.sim.dim.x, game.sim.dim.y,
+			game.sim.image[1])
+	} else {
+		game.gg.draw_image_by_id(game.sim.pos.x, game.sim.pos.y, game.sim.dim.x, game.sim.dim.y,
+			game.sim.image[2])
+	}
 }
 
 fn boundarys_draw(game &Game) {
